@@ -2,7 +2,8 @@ var mongoose = require('mongoose');
 var express = require('express');
 var bodyParser = require('body-parser');
 var webTorrent = require('webtorrent');
-var admZip = require('adm-zip');
+var parseTorrent = require('parse-torrent');
+var archiver = require('archiver');
 var fs = require('fs');
 var path = require('path');
 
@@ -13,8 +14,8 @@ var path = require('path');
 mongoose.connect('mongodb://localhost/alfrid');
 
 var torrentSchema = new mongoose.Schema({
-	url: String,
-	name: String
+	uri: { type: String, unique: true, required: true },
+	name: String,
 });
 var torrentModel = mongoose.model('torrents', torrentSchema);
 
@@ -25,49 +26,26 @@ var torrentModel = mongoose.model('torrents', torrentSchema);
 
 var torrentClient = new webTorrent();
 
+torrentModel.find({}, function (err, torrentDBs) {
+	if (err) return console.log(err);
+	for (var torrentDB of torrentDBs) {
+		torrentClient.add(torrentDB.uri);
+	}
+});
+
 
 //
 // HTTP Server
 //
 
 var app = express();
+app.use(express.static('public'));
+app.use(express.static('node_modules/vue/dist'));
+app.use(express.static('node_modules/vue-resource/dist'));
+app.use(express.static('node_modules/normalize.css'));
+app.use(express.static('node_modules/font-awesome'));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
-
-// Static Files
-app.get('/', function (req, res) {
-	res.sendFile(__dirname + '/public/index.html');
-});
-app.get('/style.css', function (req, res) {
-	res.sendFile(__dirname + '/public/style.css');
-});
-app.get('/app.js', function (req, res) {
-	res.sendFile(__dirname + '/public/app.js');
-});
-app.get('/pure-min.css', function (req, res) {
-	res.sendFile(__dirname + '/node_modules/purecss/build/pure-min.css');
-});
-app.get('/font-awesome.min.css', function (req, res) {
-	res.sendFile(__dirname + '/node_modules/font-awesome/css/font-awesome.min.css');
-});
-app.get('/fonts/fontawesome-webfont.ttf', function (req, res) {
-	res.sendFile(__dirname + '/node_modules/font-awesome/fonts/fontawesome-webfont.ttf');
-});
-app.get('/fonts/fontawesome-webfont.woff2', function (req, res) {
-	res.sendFile(__dirname + '/node_modules/font-awesome/fonts/fontawesome-webfont.woff2');
-});
-app.get('/fonts/fontawesome-webfont.woff', function (req, res) {
-	res.sendFile(__dirname + '/node_modules/font-awesome/fonts/fontawesome-webfont.woff');
-});
-app.get('/vue.min.js', function (req, res) {
-	res.sendFile(__dirname + '/node_modules/vue/dist/vue.min.js');
-});
-app.get('/vue-resource.min.js', function (req, res) {
-	res.sendFile(__dirname + '/node_modules/vue-resource/dist/vue-resource.min.js');
-});
-app.get('/alfrid.png', function (req, res) {
-	res.sendFile(__dirname + '/public/img/alfrid.png');
-});
 
 // API
 app.get('/api/torrents', function (req, res) {
@@ -88,7 +66,8 @@ app.get('/api/torrents', function (req, res) {
 			});
 		}
 		torrentsData.push({
-			id: torrent.infoHash,
+			uri: torrent.magnetURI,
+			hash: torrent.infoHash,
 			name: torrent.name,
 			size: totalSize, // bytes
 			percentage: torrent.progress.toFixed(2) * 100, // %
@@ -102,28 +81,43 @@ app.get('/api/torrents', function (req, res) {
 	res.send(torrentsData);
 });
 app.post('/api/torrents', function (req, res) {
-	torrentClient.add(req.body.url, {path: __dirname + '/Files'}, function (torrent) {
-		var torrentDB = new torrentModel({url: torrent.magnetURI, name: torrent.name});
+	torrentClient.add(req.body.uri, {path: __dirname + '/Files'}, function (torrent) {
+		var torrentDB = new torrentModel({uri: torrent.magnetURI, name: torrent.name});
 		torrentDB.save();
 	});
 });
 app.delete('/api/torrents', function (req, res) {
-	torrentClient.remove(req.body.id);
-	torrentModel.remove({url: req.body.id}).exec();
+	torrentClient.remove(req.body.hash);
+	torrentModel.remove({uri: req.body.uri}).exec();
 });
 app.get('/api/download', function (req, res) {
+
 	var torrent = torrentClient.get(req.query.torrentId);
-	var zipPath = __dirname + "/Files/tmp/" + torrent.name + ".zip";
-	var zip = new admZip();
+	if (!torrent) {
+		console.log("torrent not found");
+		res.status(500).end();
+	}
+
+	console.log("archiving...");
+	var archive = archiver('zip');
+
+	res.attachment("lapin.zip");
+
+	archive.on('error', function(err) {
+		console.log(err.message);
+		res.status(500).end();
+	});
+	archive.on('end', function() {
+		res.download(__dirname + "/index.js");
+		console.log("fini");
+	});
+	archive.pipe(fs.createWriteStream(__dirname + "/test.zip"));
+
 	// for (var file of torrent.files) {
-		// zip.addLocalFile(__dirname + "/Files/" + file.path);
-		zip.addLocalFile(__dirname + "index.js");
+	// 	archive.file(__dirname+"/Files/"+file.path, { name: file.name });
 	// }
-	// zip.writeZip(zipPath);
-	// res.sendFile(zipPath);
-	// fs.unlink(zipPath, function (err) {
-	// 	fs.rmdirSync(__dirname + "/Files/tmp");
-	// });
+	archive.file(__dirname + '/index.js');
+	archive.finalize();
 });
 
 app.listen(3000);

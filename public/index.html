@@ -4,69 +4,50 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>Alfrid</title>
-		<link rel="stylesheet" href="pure-min.css">
-		<link rel="stylesheet" href="font-awesome.min.css">
-		<link rel="stylesheet" href="style.css">
+		<link rel="stylesheet" href="normalize.css">
+		<link rel="stylesheet" href="css/font-awesome.min.css">
+		<link rel="stylesheet" href="css/style.css">
 	</head>
 
 	<body>
 
-		<div class="pure-g">
+		<table id='torrent-list'>
+			<thead>
+				<tr>
+					<td>Name</td>
+					<td>Size</td>
+					<td>Percentage</td>
+					<td>Time</td>
+					<td>DownSpeed</td>
+					<td>UpSpeed</td>
+					<td>Ratio</td>
+					<td>Actions</td>
+				</tr>
+			</thead>
+			<tbody>
+				<tr v-for="torrent in torrents">
+					<td>{{torrent.name}}</td>
+					<td>{{torrent.size | size}}</td>
+					<td>{{torrent.percentage}}%</td>
+					<td>{{torrent.time | time}}</td>
+					<td>{{torrent.down | size}}/s</td>
+					<td>{{torrent.up | size}}/s</td>
+					<td>{{torrent.ratio}}</td>
+					<td><button v-on:click="downloadTorrent(torrent)"><i class="fa fa-download"></i></button>
+						<button v-on:click="removeTorrent(torrent)"><i class="fa fa-remove"></i></button></td>
+				</tr>
+			</tbody>
+		</table>
 
-			<!-- <div class="pure&#45;menu pure&#45;u&#45;1&#45;4"> -->
-			<!-- 	<span class="pure&#45;menu&#45;heading">Alfrid</span> -->
-			<!-- 	<ul class="pure&#45;menu&#45;list"> -->
-			<!-- 		<li class="pure&#45;menu&#45;item"> -->
-			<!-- 			<a href="" class="pure&#45;menu&#45;link">Movies</a> -->
-			<!-- 		</li> -->
-			<!-- 		<li class="pure&#45;menu&#45;item"> -->
-			<!-- 			<a href="" class="pure&#45;menu&#45;link">TV Shows</a> -->
-			<!-- 		</li> -->
-			<!-- 		<li class="pure&#45;menu&#45;item"> -->
-			<!-- 			<a href="" class="pure&#45;menu&#45;link">Music</a> -->
-			<!-- 		</li> -->
-			<!-- 	</ul> -->
-			<!-- </div> -->
-
-			<div class="pure-u">
-				<table id='torrent-list' class="pure-table">
-					<thead>
-						<tr>
-							<td>Name</td>
-							<td>Size</td>
-							<td>Percentage</td>
-							<td>Time</td>
-							<td>DownSpeed</td>
-							<td>UpSpeed</td>
-							<td>Ratio</td>
-							<td>Actions</td>
-						</tr>
-					</thead>
-					<tbody>
-						<tr v-for="torrent in torrents">
-							<td>{{torrent.name}}</td>
-							<td>{{torrent.size | size}}</td>
-							<td>{{torrent.percentage}}%</td>
-							<td>{{torrent.time | time}}</td>
-							<td>{{torrent.down | size}}/s</td>
-							<td>{{torrent.up | size}}/s</td>
-							<td>{{torrent.ratio}}</td>
-							<td><button class="pure-button" v-on:click="downloadTorrent(torrent)"><i class="fa fa-download"></i></button>
-							<button class="pure-button" v-on:click="removeTorrent(torrent)"><i class="fa fa-remove"></i></button></td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-
-			<div id="torrent-form" class="pure-u-1-4 pure-form pure-form-stacked">
-				<input type="text" v-model="torrent.url">
-				<button class="pure-button" v-on:click="addTorrent()">Add</button>
-			</div>
+		<div id="torrent-form">
+			<input type="text" v-model="torrent.uri">
+			<button v-on:click="addTorrent()">Add</button>
 		</div>
 
-		<script src="vue.min.js"></script>
-		<script src="vue-resource.min.js"></script>
-		<script src="app.js"></script>
+		<script src="vue.js"></script>
+		<script src="vue-resource.js"></script>
+		<script src="js/app.js"></script>
 
 	</body>
+
 </html>
