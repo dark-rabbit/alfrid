@@ -4,7 +4,7 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>Alfrid</title>
-		<link rel="stylesheet" href="normalize.css">
+		<link rel="stylesheet" href="css/normalize.css">
 		<link rel="stylesheet" href="css/font-awesome.min.css">
 		<link rel="stylesheet" href="css/style.css">
 	</head>
@@ -34,6 +34,7 @@
 					<td>{{torrent.up | size}}/s</td>
 					<td>{{torrent.ratio}}</td>
 					<td><button v-on:click="downloadTorrent(torrent)"><i class="fa fa-download"></i></button>
+						<button v-on:click="togglePauseTorrent(torrent)"><i class="fa fa-pause"></i></button>
 						<button v-on:click="removeTorrent(torrent)"><i class="fa fa-remove"></i></button></td>
 				</tr>
 			</tbody>
@@ -44,8 +45,8 @@
 			<button v-on:click="addTorrent()">Add</button>
 		</div>
 
-		<script src="vue.js"></script>
-		<script src="vue-resource.js"></script>
+		<script src="js/vue.js"></script>
+		<script src="js/vue-resource.js"></script>
 		<script src="js/app.js"></script>
 
 	</body>

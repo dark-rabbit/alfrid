@@ -1,7 +1,7 @@
 {
   "name": "alfrid",
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "alfrid.js",
   "author": "dark-rabbit",
   "license": "MIT",
   "dependencies": {

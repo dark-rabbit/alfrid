@@ -8,15 +8,18 @@ var torrentList = new Vue({
 
 	methods: {
 		getTorrents: function() {
-			this.$http.get('/api/torrents').then(function (res) {
+			this.$http.get('/api/torrent').then(function (res) {
 				this.torrents = res.data;
 			});
 		},
+		togglePauseTorrent: function(torrent) {
+			this.$http.put('/api/torrent/pause', torrent);
+		},
 		removeTorrent: function (torrent) {
-			this.$http.delete('/api/torrents', torrent);
+			this.$http.delete('/api/torrent', torrent);
 		},
 		downloadTorrent: function (torrent) {
-			this.$http.get('/api/download?torrentId=' + torrent.hash);
+			this.$http.get('/api/torrent/download?torrentId=' + torrent.hash);
 		}
 	},
 
@@ -36,7 +39,7 @@ var torrentForm = new Vue({
 
 	methods: {
 		addTorrent: function () {
-			this.$http.post('/api/torrents', this.torrent);
+			this.$http.post('/api/torrent', this.torrent);
 		}
 	},
 });

@@ -1,6 +1,6 @@
 *
 !.gitignore
-!index.js
+!alfrid.js
 !package.json
 !public/*
 !public/js/*
