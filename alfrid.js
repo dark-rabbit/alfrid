@@ -2,13 +2,13 @@ var mongoose = require('mongoose');
 var express = require('express');
 var bodyParser = require('body-parser');
 var webTorrent = require('webtorrent');
-var parseTorrent = require('parse-torrent');
 var archiver = require('archiver');
 var fs = require('fs');
 
 console.log("============");
 console.log("|| ALFRID ||");
 console.log("============");
+
 
 //
 // Data Base
@@ -19,8 +19,11 @@ mongoose.connect('mongodb://localhost/alfrid');
 
 var torrentSchema = new mongoose.Schema({
 	name: String,
-	uri: { type: String, unique: true, required: true },
+	uri: {type: String, unique: true, required: true},
 	active: {type: Boolean, default: true},
+	progress: {type: Number, default: 0},
+	size: {type: Number, default: 0},
+	files: [String],
 	ratio: {type: Number, default: 0}
 });
 var torrentModel = mongoose.model('torrents', torrentSchema);
@@ -40,7 +43,10 @@ torrentModel.find({}, function (err, torrentDBs) {
 
 	for (var torrentDB of torrentDBs) {
 		if (torrentDB.active) {
-			torrentClient.add(torrentDB.uri, {path: __dirname + '/DATA'});
+			torrentClient.add(
+				torrentDB.uri,
+				{path: __dirname + '/DATA'}
+			);
 		}
 	}
 });
@@ -63,35 +69,59 @@ app.use(bodyParser.json());
 // GET torrents metatdatas
 app.get('/api/torrent', function (req, res) {
 
-	var torrentsData = [];
+	torrentModel.find({}, function (err, torrentDBs) {
 
-	for (var torrent of torrentClient.torrents) {
-
-		var filesData = [];
-		var totalSize = 0;
-
-		for (var file of torrent.files) {
-			var size = file.length;
-			totalSize += size;
-			filesData.push({
-				name: file.name,
-				size: size.toFixed(0)
-			});
+		if (err) {
+			console.log(err);
+			return res.status(404).end();
 		}
-		torrentsData.push({
-			uri: torrent.magnetURI,
-			hash: torrent.infoHash,
-			name: torrent.name,
-			size: totalSize.toFixed(0), // bytes
-			percentage: (torrent.progress * 100).toFixed(0), // %
-			time: (torrent.timeRemaining / 1000).toFixed(0), // seconds
-			down: torrent.downloadSpeed.toFixed(0),
-			up: torrent.uploadSpeed.toFixed(0),
-			ratio: torrent.ratio.toFixed(2),
-			files: filesData
-		});
-	}
-	res.send(torrentsData);
+
+		var torrentsData = [];
+
+		for (var torrentDB of torrentDBs) {
+
+			if (torrentDB.active) {
+
+				var torrent = torrentClient.get(torrentDB.uri);
+
+				if (torrent) {
+
+					torrentsData.push({
+						uri: torrentDB.uri,
+						name: torrentDB.name,
+						size: torrentDB.size, // bytes
+						percentage: (torrent.progress * 100).toFixed(0), // %
+						time: torrent.timeRemaining.toFixed(0), // ms
+						down: torrent.downloadSpeed.toFixed(0),
+						up: torrent.uploadSpeed.toFixed(0),
+						ratio: (torrentDB.ratio + torrent.ratio).toFixed(2),
+						files: torrentDB.files,
+						active: true
+					});
+
+				} else {
+					torrentDB.active = false;
+					torrentDB.save();
+				}
+
+			} else {
+
+				torrentsData.push({
+					uri: torrentDB.uri,
+					name: torrentDB.name,
+					size: torrentDB.size, // bytes
+					percentage: torrentDB.progress, // %
+					time: null,
+					down: 0,
+					up: 0,
+					ratio: torrentDB.ratio,
+					files: torrentDB.files,
+					active: false
+				});
+			}
+		}
+		res.send(torrentsData);
+	});
 });
 
 
@@ -100,79 +130,57 @@ app.post('/api/torrent', function (req, res) {
 
 	console.log(req.ip + " Adding torrent");
 
+	// TODO
+	// better uri checking
 	if (!req.body.uri) {
 		console.log("Invalid torrent uri");
 		return res.status(404).end();
 	}
 
 	torrentClient.add(req.body.uri, {path: __dirname + '/DATA'}, function (torrent) {
-		var torrentDB = new torrentModel({uri: torrent.magnetURI, name: torrent.name});
+		var totalSize = 0;
+		var fileNames = [];
+		for (var file of torrent.files) {
+			totalSize += file.length;
+			fileNames.push(file.name);
+		}
+		var torrentDB = new torrentModel({
+			uri: torrent.magnetURI,
+			name: torrent.name,
+			size: totalSize.toFixed(0),
+			files: fileNames
+		});
 		torrentDB.save();
 		console.log(torrent.name + " added");
 	});
 });
 
 
-// DELETE a torrent
-app.delete('/api/torrent', function (req, res) {
+// STREAM torrent file
+app.get('/api/torrent/stream', function (req, res) {
 
-	console.log(req.ip + " Removing torrent");
-
-	var torrent = torrentClient.get(req.body.hash);
-	if (!torrent) {
-		console.log("Torrent not found");
-		return res.status(404).end();
-	}
-
-	torrent.destroy();
-	torrentModel.where({uri: req.body.uri}).findOneAndUpdate({active: false}).exec();
-	console.log(req.body.name + " removed");
-});
-
-
-// TOGGLE PAUSE a torrent
-app.put('/api/torrent/pause', function (req, res) {
-
-	console.log(req.ip + " Toggle pause torrent");
-	var torrent = torrentClient.get(req.body.hash);
-	if (!torrent) {
-		console.log("Torrent not found");
-		return res.status(404).end();
-	}
-
-	torrentModel.where({uri: req.body.uri}).findOne(function (err, torrentDB) {
-		if (err) {
-			console.log(err);
-			return res.status(500).end();
-		}
-		if (torrentDB.paused) {
-			console.log(req.body.name + " resumed");
-			torrent.resume();
-		} else {
-			console.log(req.body.name + " paused");
-			torrent.pause();
-		}
-		torrentDB.paused = !torrentDB.paused;
-		torrentDB.save();
-	});
-});
-
-
-// DOWNLOAD a torrent's files
-app.get('/api/torrent/download', function (req, res) {
-
-	console.log(req.ip + "Downloading torrent files");
+	console.log(req.ip + " Streaming a torrent")
 	var torrent = torrentClient.get(req.query.torrentId);
 	if (!torrent) {
 		console.log("Torrent not found");
 		return res.status(404).end();
 	}
-	if (torrent.progress < 1) {
-		console.log("Torrent " + torrent.name + " not ready for archiving");
+
+	console.log("S")
+});
+
+
+// DOWNLOAD torrent files
+app.get('/api/torrent/download', function (req, res) {
+
+	console.log(req.ip + " Downloading torrent files");
+	var torrent = torrentClient.get(req.query.torrentId);
+	if (!torrent) {
+		console.log("Torrent not found");
 		return res.status(404).end();
 	}
 
-	console.log("Archiving " + torrent.name);
+	console.log("Archiving and sending " + torrent.name);
 	var archive = archiver('zip');
 
 	res.attachment(torrent.name + ".zip");
@@ -182,15 +190,45 @@ app.get('/api/torrent/download', function (req, res) {
 		res.status(500).end();
 	});
 	archive.on('end', function() {
-		console.log(torrent.name + " archived and sent");
+		console.log(torrent.name + ' archived and sent')
 	});
+
 	archive.pipe(res);
-
-	for (var file of torrent.files) {
-		archive.file(__dirname + "/DATA/" + file.path, { name: file.name });
-	}
-
+	archive.directory(torrent.path + "/" + torrent.name, torrent.name);
 	archive.finalize();
+});
+
+
+// TOGGLE a torrent
+app.put('/api/torrent/toggle', function (req, res) {
+
+	console.log(req.ip + " Toggle torrent");
+
+	torrentModel.where({uri: req.body.uri}).findOne(function (err, torrentDB) {
+		if (err) {
+			console.log(err);
+			return res.status(500).end();
+		}
+
+		if (torrentDB.active) {
+
+			var torrent = torrentClient.get(torrentDB.uri);
+			if (torrent) {
+				torrentDB.progress = (100 * torrent.progress).toFixed(0);
+				torrentDB.ratio += torrent.ratio.toFixed(2);
+				torrent.destroy();
+			}
+			console.log(req.body.name + " desactivated");
+
+		} else {
+
+			torrentClient.add(torrentDB.uri, {path: __dirname + "/DATA"});
+			console.log(req.body.name + " activated");
+		}
+
+		torrentDB.active = !torrentDB.active;
+		torrentDB.save();
+	});
 });
 
 
@@ -199,4 +237,3 @@ app.listen(3000);
 console.log("===========");
 console.log("|| READY ||");
 console.log("===========");
-

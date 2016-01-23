@@ -5,14 +5,14 @@
   "author": "dark-rabbit",
   "license": "MIT",
   "dependencies": {
-    "archiver": "^0.21.0",
-    "body-parser": "^1.14.2",
-    "express": "^4.13.3",
-    "font-awesome": "^4.5.0",
-    "mongoose": "^4.3.6",
-    "normalize.css": "^3.0.3",
-    "vue": "^1.0.15",
-    "vue-resource": "^0.6.0",
-    "webtorrent": "^0.72.2"
+    "archiver": "latest",
+    "body-parser": "latest",
+    "express": "latest",
+    "font-awesome": "latest",
+    "mongoose": "latest",
+    "normalize.css": "latest",
+    "vue": "latest",
+    "vue-resource": "latest",
+    "webtorrent": "latest"
   }
 }

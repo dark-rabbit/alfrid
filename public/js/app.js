@@ -12,14 +12,11 @@ var torrentList = new Vue({
 				this.torrents = res.data;
 			});
 		},
-		togglePauseTorrent: function(torrent) {
-			this.$http.put('/api/torrent/pause', torrent);
-		},
-		removeTorrent: function (torrent) {
-			this.$http.delete('/api/torrent', torrent);
+		toggleTorrent: function(torrent) {
+			this.$http.put('/api/torrent/toggle', torrent);
 		},
 		downloadTorrent: function (torrent) {
-			this.$http.get('/api/torrent/download?torrentId=' + torrent.hash);
+			window.location = '/api/torrent/download?torrentId=' + torrent.hash;
 		}
 	},
 
@@ -65,10 +62,10 @@ Vue.filter('size', function (bytes) {
 	return result;
 });
 
-Vue.filter('time', function (sec) {
+Vue.filter('time', function (ms) {
 	var min = 60;
 	var hour = 60 * min;
-	var time = parseInt(sec);
+	var time = (ms * 1000).toFixed(0);
 	var result = "";
 	if (time > min) {
 		time = (time / min).toFixed(0);

@@ -33,9 +33,14 @@
 					<td>{{torrent.down | size}}/s</td>
 					<td>{{torrent.up | size}}/s</td>
 					<td>{{torrent.ratio}}</td>
-					<td><button v-on:click="downloadTorrent(torrent)"><i class="fa fa-download"></i></button>
-						<button v-on:click="togglePauseTorrent(torrent)"><i class="fa fa-pause"></i></button>
-						<button v-on:click="removeTorrent(torrent)"><i class="fa fa-remove"></i></button></td>
+					<td>
+						<button v-on:click="downloadTorrent(torrent)">
+							<i class="fa fa-download"></i>
+						</button>
+						<button v-on:click="toggleTorrent(torrent)">
+							<i class="fa" v-bind:class="{'fa-stop': torrent.active, 'fa-play': !torrent.active}"></i>
+						</button>
+					</td>
 				</tr>
 			</tbody>
 		</table>
