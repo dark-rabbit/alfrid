@@ -165,7 +165,6 @@ app.post('/api/torrent', function (req, res) {
 app.get('/api/torrent/stream', function (req, res) {
 
 	console.log(req.ip + " Streaming a torrent");
-	console.log(req.query);
 	var torrent = torrentClient.get(req.query.hash);
 	if (!torrent) {
 		console.log("Torrent not found");
