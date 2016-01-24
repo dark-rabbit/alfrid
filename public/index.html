@@ -11,39 +11,54 @@
 
 	<body>
 
-		<table id='torrent-list'>
-			<thead>
-				<tr>
-					<td>Name</td>
-					<td>Size</td>
-					<td>Percentage</td>
-					<td>Time</td>
-					<td>DownSpeed</td>
-					<td>UpSpeed</td>
-					<td>Ratio</td>
-					<td>Actions</td>
-				</tr>
-			</thead>
-			<tbody>
-				<tr v-for="torrent in torrents">
-					<td>{{torrent.name}}</td>
-					<td>{{torrent.size | size}}</td>
-					<td>{{torrent.percentage}}%</td>
-					<td>{{torrent.time | time}}</td>
-					<td>{{torrent.down | size}}/s</td>
-					<td>{{torrent.up | size}}/s</td>
-					<td>{{torrent.ratio}}</td>
-					<td>
-						<button v-on:click="downloadTorrent(torrent)">
-							<i class="fa fa-download"></i>
-						</button>
-						<button v-on:click="toggleTorrent(torrent)">
-							<i class="fa" v-bind:class="{'fa-stop': torrent.active, 'fa-play': !torrent.active}"></i>
-						</button>
-					</td>
-				</tr>
-			</tbody>
-		</table>
+		<div id='torrent-list'>
+			<table>
+				<thead>
+					<tr>
+						<td>Name</td>
+						<td>Size</td>
+						<td>Percentage</td>
+						<td>Time</td>
+						<td>DownSpeed</td>
+						<td>UpSpeed</td>
+						<td>Ratio</td>
+						<td>Actions</td>
+					</tr>
+				</thead>
+				<tbody>
+					<tr v-for="torrent in torrents"
+						v-on:click="selectedTorrent=torrent">
+						<td>{{torrent.name}}</td>
+						<td>{{torrent.size | size}}</td>
+						<td>{{torrent.percentage}}%</td>
+						<td>{{torrent.time | time}}</td>
+						<td>{{torrent.down | size}}/s</td>
+						<td>{{torrent.up | size}}/s</td>
+						<td>{{torrent.ratio}}</td>
+						<td>
+							<button v-on:click="downloadTorrent(torrent)">
+								<i class="fa fa-download"></i>
+							</button>
+							<button v-on:click="toggleTorrent(torrent)">
+								<i class="fa" v-bind:class="{'fa-stop': torrent.active, 'fa-play': !torrent.active}"></i>
+							</button>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+
+			<ul v-show="selectedTorrent">
+				<li v-for="file in selectedTorrent.files"
+					v-on:click="streamTorrent(selectedTorrent, file)">
+					{{file}}
+				</li>
+			</ul>
+
+			<video controls>
+				<source v-bind:src="fileToStream" type="video/mp4"></source>
+			</video>
+		</div>
+
 
 		<div id="torrent-form">
 			<input type="text" v-model="torrent.uri">

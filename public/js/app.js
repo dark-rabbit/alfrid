@@ -3,7 +3,9 @@ var torrentList = new Vue({
 	el: '#torrent-list',
 
 	data: {
-		torrents: []
+		torrents: [],
+		selectedTorrent: null,
+		fileToStream: null,
 	},
 
 	methods: {
@@ -15,8 +17,12 @@ var torrentList = new Vue({
 		toggleTorrent: function(torrent) {
 			this.$http.put('/api/torrent/toggle', torrent);
 		},
+		streamTorrent: function(torrent, file) {
+			this.fileToStream = file;
+			window.location('/api/torrent/stream?hash=' + torrent.hash + '&fileName=' + file);
+		},
 		downloadTorrent: function (torrent) {
-			window.location = '/api/torrent/download?torrentId=' + torrent.hash;
+			window.location = '/api/torrent/download?hash=' + torrent.hash;
 		}
 	},
 

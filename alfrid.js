@@ -4,6 +4,7 @@ var bodyParser = require('body-parser');
 var webTorrent = require('webtorrent');
 var archiver = require('archiver');
 var fs = require('fs');
+var path = require('path');
 
 console.log("============");
 console.log("|| ALFRID ||");
@@ -20,6 +21,7 @@ mongoose.connect('mongodb://localhost/alfrid');
 var torrentSchema = new mongoose.Schema({
 	name: String,
 	uri: {type: String, unique: true, required: true},
+	hash: {type: String, unique: true, required: true},
 	active: {type: Boolean, default: true},
 	progress: {type: Number, default: 0},
 	size: {type: Number, default: 0},
@@ -88,6 +90,7 @@ app.get('/api/torrent', function (req, res) {
 
 					torrentsData.push({
 						uri: torrentDB.uri,
+						hash: torrentDB.hash,
 						name: torrentDB.name,
 						size: torrentDB.size, // bytes
 						percentage: (torrent.progress * 100).toFixed(0), // %
@@ -108,6 +111,7 @@ app.get('/api/torrent', function (req, res) {
 
 				torrentsData.push({
 					uri: torrentDB.uri,
+					hash: torrentDB.hash,
 					name: torrentDB.name,
 					size: torrentDB.size, // bytes
 					percentage: torrentDB.progress, // %
@@ -146,6 +150,7 @@ app.post('/api/torrent', function (req, res) {
 		}
 		var torrentDB = new torrentModel({
 			uri: torrent.magnetURI,
+			hash: torrent.infoHash,
 			name: torrent.name,
 			size: totalSize.toFixed(0),
 			files: fileNames
@@ -159,14 +164,18 @@ app.post('/api/torrent', function (req, res) {
 // STREAM torrent file
 app.get('/api/torrent/stream', function (req, res) {
 
-	console.log(req.ip + " Streaming a torrent")
-	var torrent = torrentClient.get(req.query.torrentId);
+	console.log(req.ip + " Streaming a torrent");
+	console.log(req.query);
+	var torrent = torrentClient.get(req.query.hash);
 	if (!torrent) {
 		console.log("Torrent not found");
 		return res.status(404).end();
 	}
-
-	console.log("S")
+	for (var file of torrent.files) {
+		if (file.name === req.query.fileName) {
+			res.sendFile(torrent.path + "/" + file.path);
+		}
+	}
 });
 
 
@@ -174,7 +183,8 @@ app.get('/api/torrent/stream', function (req, res) {
 app.get('/api/torrent/download', function (req, res) {
 
 	console.log(req.ip + " Downloading torrent files");
-	var torrent = torrentClient.get(req.query.torrentId);
+	console.log(req.query);
+	var torrent = torrentClient.get(req.query.hash);
 	if (!torrent) {
 		console.log("Torrent not found");
 		return res.status(404).end();
@@ -190,7 +200,7 @@ app.get('/api/torrent/download', function (req, res) {
 		res.status(500).end();
 	});
 	archive.on('end', function() {
-		console.log(torrent.name + ' archived and sent')
+		console.log(torrent.name + ' archived and sent');
 	});
 
 	archive.pipe(res);
