@@ -47,10 +47,10 @@ var torrentForm = new Vue({
 });
 
 Vue.filter('size', function (bytes) {
+	var size = parseInt(bytes);
 	var kilo = Math.pow(10, 3);
 	var mega = Math.pow(10, 6);
 	var giga = Math.pow(10, 9);
-	var size = parseInt(bytes);
 	var result = "";
 	if (size > giga) {
 		size = (size / giga).toFixed(2);
@@ -67,10 +67,10 @@ Vue.filter('size', function (bytes) {
 	return result;
 });
 
-Vue.filter('time', function (ms) {
+Vue.filter('time', function (sec) {
+	var time = parseInt(sec);
 	var min = 60;
 	var hour = 60 * min;
-	var time = (ms * 1000).toFixed(0);
 	var result = "";
 	if (time > min) {
 		time = (time / min).toFixed(0);

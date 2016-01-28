@@ -17,7 +17,7 @@
 					<tr>
 						<td>Name</td>
 						<td>Size</td>
-						<td>Percentage</td>
+						<td>Progress</td>
 						<td>Time</td>
 						<td>DownSpeed</td>
 						<td>UpSpeed</td>
@@ -30,7 +30,7 @@
 						v-on:click="selectedTorrent=torrent">
 						<td>{{torrent.name}}</td>
 						<td>{{torrent.size | size}}</td>
-						<td>{{torrent.percentage}}%</td>
+						<td>{{torrent.progress}}%</td>
 						<td>{{torrent.time | time}}</td>
 						<td>{{torrent.down | size}}/s</td>
 						<td>{{torrent.up | size}}/s</td>
