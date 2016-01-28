@@ -6,6 +6,9 @@ var archiver = require('archiver');
 var fs = require('fs');
 var path = require('path');
 
+// const
+var dataDir = path.join(__dirname, 'DATA');
+
 console.log("============");
 console.log("|| ALFRID ||");
 console.log("============");
@@ -25,10 +28,16 @@ var torrentSchema = new mongoose.Schema({
 	active: {type: Boolean, default: true},
 	progress: {type: Number, default: 0},
 	size: {type: Number, default: 0},
-	files: [String],
+	files: [{
+		name: String,
+		path: String,
+		size: Number
+	}],
 	ratio: {type: Number, default: 0}
 });
 var torrentModel = mongoose.model('torrents', torrentSchema);
+
+var torrentData = [];
 
 
 //
@@ -38,17 +47,37 @@ var torrentModel = mongoose.model('torrents', torrentSchema);
 console.log("Starting torrent client");
 var torrentClient = new webTorrent();
 
-console.log("Loading active torrents");
+console.log("Loading torrents");
+
 torrentModel.find({}, function (err, torrentDBs) {
 
 	if (err) return console.log(err);
 
 	for (var torrentDB of torrentDBs) {
+
 		if (torrentDB.active) {
+
 			torrentClient.add(
 				torrentDB.uri,
-				{path: __dirname + '/DATA'}
+				{path: dataDir}
 			);
+			var fileNames = [];
+			for (var file of torrentDB.files) {
+				fileNames.push(file.name);
+			}
+			torrentData.push({
+				uri: torrentDB.uri,
+				hash: torrentDB.hash,
+				name: torrentDB.name,
+				size: torrentDB.size,
+				percentage: torrentDB.progress,
+				time: 0,
+				down: 0,
+				up: 0,
+				ratio: torrentDB.ratio,
+				files: fileNames,
+				active: torrentDB.size
+			});
 		}
 	}
 });
@@ -68,64 +97,25 @@ app.use(express.static('node_modules/font-awesome'));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
-// GET torrents metatdatas
+// GET torrents metadatas
+// TODO handle a light weight request
+//			Carefull with multiple users
 app.get('/api/torrent', function (req, res) {
-
-	torrentModel.find({}, function (err, torrentDBs) {
-
-		if (err) {
-			console.log(err);
-			return res.status(404).end();
-		}
-
-		var torrentsData = [];
-
-		for (var torrentDB of torrentDBs) {
-
-			if (torrentDB.active) {
-
-				var torrent = torrentClient.get(torrentDB.uri);
-
-				if (torrent) {
-
-					torrentsData.push({
-						uri: torrentDB.uri,
-						hash: torrentDB.hash,
-						name: torrentDB.name,
-						size: torrentDB.size, // bytes
-						percentage: (torrent.progress * 100).toFixed(0), // %
-						time: torrent.timeRemaining.toFixed(0), // ms
-						down: torrent.downloadSpeed.toFixed(0),
-						up: torrent.uploadSpeed.toFixed(0),
-						ratio: (torrentDB.ratio + torrent.ratio).toFixed(2),
-						files: torrentDB.files,
-						active: true
-					});
-
-				} else {
-					torrentDB.active = false;
-					torrentDB.save();
+	for (var data of torrentData) {
+		if (data.active) {
+			var torrent = torrentClient.get(data.hash);
+			if (torrent) {
+				if (data.progress < 100) {
+					data.progress = (torrent.progress * 100).toFixed(0);		// %
+					data.time = (torrent.timeRemaining * 1000).toFixed(0);	// sec
+					data.down = torrent.downloadSpeed.toFixed(0);
 				}
-
-			} else {
-
-				torrentsData.push({
-					uri: torrentDB.uri,
-					hash: torrentDB.hash,
-					name: torrentDB.name,
-					size: torrentDB.size, // bytes
-					percentage: torrentDB.progress, // %
-					time: null,
-					down: 0,
-					up: 0,
-					ratio: torrentDB.ratio,
-					files: torrentDB.files,
-					active: false
-				});
+				data.up = torrent.uploadSpeed.toFixed(0);
+				data.ratio += torrent.ratio.toFixed(2);
 			}
 		}
-		res.send(torrentsData);
-	});
+	}
+	res.send(torrentData);
 });
 
 
@@ -135,33 +125,57 @@ app.post('/api/torrent', function (req, res) {
 	console.log(req.ip + " Adding torrent");
 
 	// TODO
-	// better uri checking
+	// better uri checking (valid, already exists ...)
 	if (!req.body.uri) {
 		console.log("Invalid torrent uri");
 		return res.status(404).end();
 	}
 
-	torrentClient.add(req.body.uri, {path: __dirname + '/DATA'}, function (torrent) {
+	torrentClient.add(req.body.uri, {path: dataDir}, function (torrent) {
+
 		var totalSize = 0;
-		var fileNames = [];
+		var files = [];
 		for (var file of torrent.files) {
 			totalSize += file.length;
+			files.push({
+				name: file.name,
+				path: file.path,
+				size: file.length.toFixed(0)
+			});
 			fileNames.push(file.name);
 		}
+		torrentData.push({
+			uri: torrent.magnetURI,
+			hash: torrent.infoHash,
+			name: torrent.name,
+			size: totalSize.toFixed(0),
+			progress: 0,
+			time: 0,
+			down: 0,
+			up: 0,
+			ratio: 0,
+			files: fileNames,
+			active: true
+		});
 		var torrentDB = new torrentModel({
 			uri: torrent.magnetURI,
 			hash: torrent.infoHash,
 			name: torrent.name,
 			size: totalSize.toFixed(0),
-			files: fileNames
+			files: files
 		});
 		torrentDB.save();
 		console.log(torrent.name + " added");
+
 	});
 });
 
 
 // STREAM torrent file
+// TODO handle static case without mongodb or torrentClient
+// TODO handle still downloading case with
+//			file.createReadStream from torrent object
+// TODO serve the subtitles
 app.get('/api/torrent/stream', function (req, res) {
 
 	console.log(req.ip + " Streaming a torrent");
@@ -172,17 +186,17 @@ app.get('/api/torrent/stream', function (req, res) {
 	}
 	for (var file of torrent.files) {
 		if (file.name === req.query.fileName) {
-			res.sendFile(torrent.path + "/" + file.path);
+			res.sendFile(path.join(torrent.path, file.path));
 		}
 	}
 });
 
 
 // DOWNLOAD torrent files
+// TODO handle only the static case without mongodb or torrentClient
 app.get('/api/torrent/download', function (req, res) {
 
 	console.log(req.ip + " Downloading torrent files");
-	console.log(req.query);
 	var torrent = torrentClient.get(req.query.hash);
 	if (!torrent) {
 		console.log("Torrent not found");
@@ -203,12 +217,13 @@ app.get('/api/torrent/download', function (req, res) {
 	});
 
 	archive.pipe(res);
-	archive.directory(torrent.path + "/" + torrent.name, torrent.name);
+	archive.directory(path.join(torrent.path, torrent.name), torrent.name);
 	archive.finalize();
 });
 
 
 // TOGGLE a torrent
+// TODO save to mongo after updating data object then torrentClient
 app.put('/api/torrent/toggle', function (req, res) {
 
 	console.log(req.ip + " Toggle torrent");
