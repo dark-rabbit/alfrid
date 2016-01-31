@@ -49,8 +49,8 @@
 
 			<ul v-show="selectedTorrent">
 				<li v-for="file in selectedTorrent.files"
-					v-on:click="streamTorrent(selectedTorrent, file)">
-					{{file}}
+					v-on:click="streamTorrent(selectedTorrent, file.name)">
+					{{file.name}}
 				</li>
 			</ul>
 

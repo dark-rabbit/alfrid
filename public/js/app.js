@@ -15,7 +15,7 @@ var torrentList = new Vue({
 			});
 		},
 		toggleTorrent: function(torrent) {
-			this.$http.put('/api/torrent/toggle', torrent);
+			this.$http.put('/api/torrent/toggle?hash=' + torrent.hash);
 		},
 		streamTorrent: function(torrent, file) {
 			this.streamingUrl = 'http://'+location.host+'/api/torrent/stream?hash='+torrent.hash+'&fileName='+file;
@@ -53,16 +53,16 @@ Vue.filter('size', function (bytes) {
 	var giga = Math.pow(10, 9);
 	var result = "";
 	if (size > giga) {
-		size = (size / giga).toFixed(2);
-		result = size + " Gb";
+		size = size / giga;
+		result = size.toFixed(2) + " Gb";
 	} else if (size > mega) {
-		size = (size / mega).toFixed(2);
-		result = size + " Mb";
+		size = size / mega;
+		result = size.toFixed(2) + " Mb";
 	} else if (size > kilo) {
-		size = (size / kilo).toFixed(2);
-		result = size + " Kb";
+		size = size / kilo;
+		result = size.toFixed(2) + " Kb";
 	} else {
-		result = size + " b";
+		result = size.toFixed(2) + " b";
 	}
 	return result;
 });
@@ -73,13 +73,13 @@ Vue.filter('time', function (sec) {
 	var hour = 60 * min;
 	var result = "";
 	if (time > min) {
-		time = (time / min).toFixed(0);
-		result = time + " min";
+		time = time / min;
+		result = time.toFixed(0) + " min";
 	} else if (time > hour) {
-		time = (time / hour).toFixed(0);
-		result = time + " h";
+		time = time / hour;
+		result = time.toFixed(0) + " h";
 	} else {
-		result = time + " s";
+		result = time.toFixed(0) + " s";
 	}
 	return result;
 });
