@@ -1,18 +1,18 @@
 {
-  "name": "alfrid",
-  "version": "0.0.1",
-  "main": "alfrid.js",
-  "author": "dark-rabbit",
-  "license": "MIT",
-  "dependencies": {
-    "archiver": "latest",
-    "body-parser": "latest",
-    "express": "latest",
-    "font-awesome": "latest",
-    "mongoose": "latest",
-    "normalize.css": "latest",
-    "vue": "latest",
-    "vue-resource": "latest",
-    "webtorrent": "latest"
-  }
+	"name": "alfrid",
+	"version": "0.0.1",
+	"main": "alfrid.js",
+	"author": "dark-rabbit",
+	"license": "GPL-3.0",
+	"dependencies": {
+		"archiver": "latest",
+		"body-parser": "latest",
+		"express": "latest",
+		"font-awesome": "latest",
+		"mongoose": "latest",
+		"normalize.css": "latest",
+		"vue": "latest",
+		"vue-resource": "latest",
+		"webtorrent": "latest"
+	}
 }
